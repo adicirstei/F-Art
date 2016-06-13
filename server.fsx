@@ -1,6 +1,8 @@
 #r "packages/Suave/lib/net40/Suave.dll"
 
 open Suave
+open Suave.Operators
+
 open System
 open System.Drawing
 open System.Drawing.Imaging
@@ -9,7 +11,7 @@ open System.Drawing.Imaging
 let draw (text:string) =
 
   let redBr = new SolidBrush(Color.Red)
-  let whiteBr = new SolidBrush(Color.Red)
+  let whiteBr = new SolidBrush(Color.White)
   let i = new Bitmap(600,400)
   let g = Graphics.FromImage i
   let f = new Font("Courier", float32 <| 24.0)
@@ -22,4 +24,11 @@ let draw (text:string) =
 
 
 
-startWebServer defaultConfig (Successful.ok <| draw "bibi")
+let app : WebPart =
+  Writers.setMimeType "image/png"
+  >=> (Successful.ok <| draw "bibi")
+  
+  
+
+
+startWebServer defaultConfig app
