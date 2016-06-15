@@ -1,5 +1,19 @@
 open System.Drawing
 
+type Particle = {
+  position : float*float
+  radius : float
+  duration : float
+  time : float
+  velocity : float*float
+  speed : float
+  color : Color
+//  prev : (Float,Float)
+}
+
+
+
+
 
 let draw (text:string) =
 
@@ -12,4 +26,5 @@ let draw (text:string) =
   g.DrawString(text, f, redBr, float32 <| 10.0, float32 <| 40.0)
   g.Flush()
   i
+
 
