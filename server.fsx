@@ -18,8 +18,5 @@ let imageWebPart (img:Image) : WebPart =
 
 
 let app : WebPart = imageWebPart <| Art.draw "Putirinta"
-  
-  
-
 
 startWebServer defaultConfig app
