@@ -15,8 +15,8 @@ type Particle = {
 
 
 
-let draw (text:string) =
-
+let draw (rand:System.Random) =
+  let text = rand.Next() |> sprintf "~# %d #~"
   let redBr = new SolidBrush(Color.Red)
   let whiteBr = new SolidBrush(Color.White)
   let i = new Bitmap(600,400)
