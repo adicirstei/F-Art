@@ -104,9 +104,9 @@ Genrate the permutation tables that are needed to calculate the noise value.
 The function takes a seed and returns the table and  a new seed.
 ***)
 
-let permutationTable (rand:System.Random) : (PermutationTable*System.Random)=
+let permutationTable (rand:System.Random) : PermutationTable =
   let perm = [|0..255|] |> Random.shuffle rand |> (fun list -> Array.append list  (Array.rev list))
-  ({perm = perm; permMod12 = generatePermMod12 perm}, rand)
+  {perm = perm; permMod12 = generatePermMod12 perm}
 
 
 (***
