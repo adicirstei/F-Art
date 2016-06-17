@@ -92,7 +92,7 @@ let createConfig (rand:System.Random) : Config =
     pointilism = 0.1 * rand.NextDouble () 
     noiseScalar = (0.000001, Random.floatRand rand 0.0002 0.004)
     startArea = Random.floatRand rand 0.0 1.5
-    maxRadius = 10 // rand.Next (5, 100)
+    maxRadius = 20 // rand.Next (5, 100)
     lineStyle = 
       if rand.NextDouble () < 0.5 
       then System.Drawing.Drawing2D.LineCap.Square 
@@ -106,7 +106,7 @@ let createConfig (rand:System.Random) : Config =
 
 let createParticle (rand:System.Random) (config:Config) (i:int) : Particle =
   let scale = (System.Math.Min (width, height)) / 2
-  let (x,y) = Random.randomSphere rand ((float scale) * config.startArea)
+  let (x,y) = Random.randomSphere rand ((float scale) * config.startArea / 2.0)
   let pal = config.palette
   let dur = Random.floatRand rand 1.0 500.0
   {
