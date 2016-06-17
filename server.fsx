@@ -17,8 +17,7 @@ let imageWebPart (img:Image) : WebPart =
   |> Successful.ok >=> Writers.setMimeType "image/png"
 
 let randomImage () =
-  let rand = new System.Random()
-  let seed = rand.Next()
+  let seed = Environment.TickCount
   
   printfn "Random seed : %d" seed
   Art.draw (new System.Random(seed))
