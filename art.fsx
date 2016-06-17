@@ -2,6 +2,7 @@
 
 open FSharp.Data
 open System.Drawing
+
 type Palette = Color array
 type Particle = {
   position : float*float
@@ -29,7 +30,7 @@ type Palettes = FSharp.Data.JsonProvider<"data/palettes.json">
 type JsonPalette = Palettes.Root
 
 
-let (width,height) = 600,400
+let (width,height) = 1200,700
 
 #load "random.fsx"
 
@@ -43,6 +44,36 @@ let lerp x y a =
 
 let tAdd (i , j) (p,q) = (i + p, j + q)
 
+
+let normalize (x,y) =
+  let len = x*x + y*y
+  if len > 0.0 then (x*(1.0 /(sqrt len)), y*(1.0 /(sqrt len))) else (0.0,0.0)
+
+let scale s (x,y) = (s * x, s * y)
+
+let maps = [| 
+  "architecture.jpg"
+  "church2.jpg"
+  "city2.jpg"
+  "city5.jpg"
+  "eye.jpg"
+  "fractal1.jpg"
+  "fractal2.jpg"
+  "geo1.jpg"
+  "geo3.jpg"
+  "geo4.jpg"
+  "geo5.jpg"
+  "map7.jpg"
+  "nature1.jpg"
+  "pat1.jpg"
+  "scifi.jpg"
+  "sym3.jpg"
+  "sym6.jpg"
+  "pattern_dots_black_white.png" |] |> Array.map (fun f -> "maps/" + f )
+
+
+let luminosity (c:Color) : float =
+  (float c.R) * 0.299 + (float c.G) * 0.587 + (float c.B) * 0.114
 
 
 let strToColor (str:string) : Color =
@@ -61,7 +92,7 @@ let createConfig (rand:System.Random) : Config =
     pointilism = 0.1 * rand.NextDouble () 
     noiseScalar = (0.000001, Random.floatRand rand 0.0002 0.004)
     startArea = Random.floatRand rand 0.0 1.5
-    maxRadius = rand.Next (5, 100)
+    maxRadius = 10 // rand.Next (5, 100)
     lineStyle = 
       if rand.NextDouble () < 0.5 
       then System.Drawing.Drawing2D.LineCap.Square 
@@ -94,72 +125,66 @@ let createParticle (rand:System.Random) (config:Config) (i:int) : Particle =
 
 #load "noise.fsx"
 
+
 let draw (rand:System.Random) =
-  let time = 0.0
+  let mutable time = 0.0
+  let mutable stepCount = 0
   let config = createConfig rand
   let pal = config.palette
-  let text = rand.Next() |> sprintf "~# %d #~"
-  let redBr = new SolidBrush(Color.Red)
-  let whiteBr = new SolidBrush(Color.White)
-  let i = new Bitmap(600,400)
-  let g = Graphics.FromImage i
-  let f = new Font("Courier", float32 <| 24.0)
 
-  let particles = Array.init 22 (createParticle rand config)
+  let i = new Bitmap(width, height)
+  let g = Graphics.FromImage i
+  let lumMap:Bitmap = new Bitmap (maps.[rand.Next maps.Length])  
+
+
+  g.DrawImage(lumMap, 0, 0, width, height)
+  //g.Flush()
+  let lumi = Array2D.init width height (fun x y -> luminosity <| i.GetPixel(x,y))
+
+  let particles = Array.init config.count (createParticle rand config)
+
+  g.SmoothingMode <- System.Drawing.Drawing2D.SmoothingMode.AntiAlias
+
 
   let simplex = Noise.permutationTable rand 
+  let pointilism = lerp 0.000001 0.5 config.pointilism
 
   let stepPart (i:int) (p:Particle) : unit =
     let (x,y) = p.position
     let fx = float <| clamp (int <| round x) 0 (width - 1)
     let fy = float <| clamp (int <| round y) 0 (height - 1)
-    let heightValue = 0.98
+    let heightValue = lumi.[int fx, int fy] / 255.0
     let pS = lerp (fst config.noiseScalar) (snd config.noiseScalar) heightValue
     let n = Noise.noise3d simplex (fx * pS) (fy * pS) (p.duration + time)
     let angle = n * System.Math.PI * 2.0
-	  let speed = p.speed + (lerp 0.0 2.0 (1.0 - heightValue))
-    let velo = tAdd p.velocity (System.Math.Cos angle, System.Math.Sin angle)
+    let speed = p.speed + (lerp 0.0 2.0 (1.0 - heightValue))
+    let velo = normalize <| tAdd p.velocity (System.Math.Cos angle, System.Math.Sin angle)
+    let move = scale speed p.velocity
+    let newPos = tAdd p.position move
+    let r = (lerp 0.01 1.0 heightValue) * p.radius * (Noise.noise3d simplex (x*pointilism) (y*pointilism) (p.duration + time))
 
-(***
-      vec2.add(p.velocity, p.velocity, [ Math.cos(angle), Math.sin(angle) ]);
-      vec2.normalize(p.velocity, p.velocity);
-      var move = vec2.scale([], p.velocity, speed);
-      vec2.add(p.position, p.position, move);
+    let pen = new Pen(p.color, float32 <| (r * (p.time / p.duration)))
+    pen.StartCap <- config.lineStyle
+    pen.EndCap <- config.lineStyle
 
-      var s2 = pointilism;
-      var r = p.radius * simplex.noise3D(x * s2, y * s2, p.duration + time);
-      r *= lerp(0.01, 1.0, heightValue);
-      ctx.beginPath();
-      ctx.lineTo(x, y);
-      ctx.lineTo(p.position[0], p.position[1]);
-      ctx.lineWidth = r * (p.time / p.duration);
-      ctx.lineCap = opt.lineStyle || 'square';
-      ctx.lineJoin = opt.lineStyle || 'square';
-      ctx.strokeStyle = p.color;
-
-      // ctx.strokeStyle = colorStyle(rgb.map(x => x * 255));
-      ctx.globalAlpha = globalAlpha;
-      ctx.stroke();
-
-      p.time += dt;
-      if (p.time > p.duration) {
-        resetParticle(p);
-      }
-
-***)
-
+    g.DrawLine (pen, int <| x, int <| y, int <| fst newPos, int <| snd newPos)
+ 
+    particles.[i] <- 
+      if p.time + config.interval > p.duration then createParticle rand config i
+      else {p with velocity = velo; position = newPos; time = p.time + config.interval }
     ()
 
+  g.FillRectangle(new SolidBrush(pal.[0]), 0, 0, width, height )
+
+  while stepCount < config.steps do
+    time <- time + config.interval
+    stepCount <- stepCount + 1
+    Array.iteri stepPart particles 
 
 
-  g.FillRectangle(whiteBr, float32 <| 0.0, float32 <| 0.0, float32 <| 600.0, float32 <| 400.0 )
 
-
-  
-  pal |> Array.iteri (fun i c -> g.FillRectangle((new SolidBrush(c) ), float32 <| 30*i, float32 <| 0.0, float32 <| 30*i + 30, float32 <| 64.0 ))
-
-  //g.DrawString(text, f, redBr, float32 <| 10.0, float32 <| 40.0)
-  g.Flush()
+  g.DrawImage(lumMap, 0, 0, 60, 40)
+  //g.Flush()
   i
 
 

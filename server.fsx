@@ -17,10 +17,15 @@ let imageWebPart (img:Image) : WebPart =
   |> Successful.ok >=> Writers.setMimeType "image/png"
 
 let randomImage () =
-  Art.draw (System.Random())
+  let rand = new System.Random()
+  let seed = rand.Next()
+  
+  printfn "Random seed : %d" seed
+  Art.draw (new System.Random(seed))
   |> imageWebPart
 
 let seededImage seed =
+  printfn "Chosen seed : %d" seed
   Art.draw (System.Random(seed))
   |> imageWebPart
 
