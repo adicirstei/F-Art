@@ -69,7 +69,8 @@ let maps = [|
   "scifi.jpg"
   "sym3.jpg"
   "sym6.jpg"
-  "pattern_dots_black_white.png" |] |> Array.map (fun f -> "maps/" + f )
+  "pattern_dots_black_white.png"
+  "680051.jpg" |] |> Array.map (fun f -> "maps/" + f )
 
 
 let luminosity (c:Color) : float =
